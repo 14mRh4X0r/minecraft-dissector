@@ -1,5 +1,3 @@
-#include <config.h>
-
 #define WS_BUILD_DLL
 
 #include <epan/packet.h>
@@ -30,7 +28,7 @@ static void minecraft_add_i16(proto_tree *tree, int hfindex, tvbuff_t *tvb, gint
 static void minecraft_add_i64(proto_tree *tree, int hfindex, tvbuff_t *tvb, gint *offset);
 
 
-#include "generated.c"
+#include "generated.h"
 
 static int proto_minecraft = -1;
 static int hf_length = -1;
