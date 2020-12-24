@@ -19,13 +19,13 @@ WS_DLL_PUBLIC_DEF const int plugin_want_minor = WIRESHARK_VERSION_MINOR;
 
 WS_DLL_PUBLIC void plugin_register(void);
 
-static void minecraft_add_varint(proto_tree *tree, int hfindex, tvbuff_t *tvb, gint *offset);
-static void minecraft_add_string(proto_tree *tree, int hfindex, tvbuff_t *tvb, gint *offset);
-static void minecraft_add_u8(proto_tree *tree, int hfindex, tvbuff_t *tvb, gint *offset);
-static void minecraft_add_i8(proto_tree *tree, int hfindex, tvbuff_t *tvb, gint *offset);
-static void minecraft_add_u16(proto_tree *tree, int hfindex, tvbuff_t *tvb, gint *offset);
-static void minecraft_add_i16(proto_tree *tree, int hfindex, tvbuff_t *tvb, gint *offset);
-static void minecraft_add_i64(proto_tree *tree, int hfindex, tvbuff_t *tvb, gint *offset);
+static void minecraft_add_varint(proto_tree *tree, int hfindex, tvbuff_t *tvb, guint *offset);
+static void minecraft_add_string(proto_tree *tree, int hfindex, tvbuff_t *tvb, guint *offset);
+static void minecraft_add_u8(proto_tree *tree, int hfindex, tvbuff_t *tvb, guint *offset);
+static void minecraft_add_i8(proto_tree *tree, int hfindex, tvbuff_t *tvb, guint *offset);
+static void minecraft_add_u16(proto_tree *tree, int hfindex, tvbuff_t *tvb, guint *offset);
+static void minecraft_add_i16(proto_tree *tree, int hfindex, tvbuff_t *tvb, guint *offset);
+static void minecraft_add_i64(proto_tree *tree, int hfindex, tvbuff_t *tvb, guint *offset);
 
 
 #include "generated.h"
@@ -47,7 +47,7 @@ static hf_register_info hf[] = {
             0x00, "Packet Data Length", HFILL }},
 
     { &hf_packet_id,
-        { "Packet Id", "minecraft.packet_id", FT_UINT32, BASE_HEX, NULL,
+        { "Packet Id", "minecraft.packet_id", FT_UINT8, BASE_HEX, NULL,
             0x0, "Packet Id", HFILL }},
 
     { &hf_data,
@@ -64,63 +64,63 @@ static gint *ett[] = {
 };
 
 
-static bool read_varint(guint32 *result, tvbuff_t *tvb, gint *offset)
-{
+static bool read_varint(guint32 *result, tvbuff_t *tvb, guint *offset) {
     *result = 0;
     guint shift = 0;
 
     const guint length = tvb_reported_length(tvb);
     while (*offset < length && shift <= 35) {
         const guint8 b = tvb_get_guint8(tvb, *offset);
-        *result |= ((b & 0x7f) << shift);
+        *result |= ((b & 0x7fu) << shift);
         *offset += 1;
         shift += 7;
-        if ((b & 0x80) == 0) /* End of varint */
+        if ((b & 0x80u) == 0) /* End of varint */
             return true;
     }
     return false;
 }
 
-static void minecraft_add_varint(proto_tree *tree, int hfindex, tvbuff_t *tvb, gint *offset) {
+static void minecraft_add_varint(proto_tree *tree, int hfindex, tvbuff_t *tvb, guint *offset) {
     const guint offset_start = *offset;
     guint32 value = 0;
     read_varint(&value, tvb, offset);
     proto_tree_add_uint(tree, hfindex, tvb, offset_start, *offset - offset_start, value);
 }
 
-static void minecraft_add_string(proto_tree *tree, int hfindex, tvbuff_t *tvb, gint *offset) {
+static void minecraft_add_string(proto_tree *tree, int hfindex, tvbuff_t *tvb, guint *offset) {
     const guint offset_start = *offset;
-    guint32 value = 0;
-    read_varint(&value, tvb, offset);
-    proto_tree_add_item(tree, hfindex, tvb, offset_start, *offset - offset_start + value, ENC_NA);
-    *offset += value;
+    guint32 len = 0;
+    read_varint(&len, tvb, offset);
+    guchar *data = tvb_get_string_enc(wmem_packet_scope(), tvb, *offset, len, ENC_UTF_8);
+    proto_tree_add_string(tree, hfindex, tvb, offset_start, *offset - offset_start + len, (gchar*) data);
+    *offset += len;
 }
 
-static void minecraft_add_u8(proto_tree *tree, int hfindex, tvbuff_t *tvb, gint *offset) {
+static void minecraft_add_u8(proto_tree *tree, int hfindex, tvbuff_t *tvb, guint *offset) {
     const guint8 v = tvb_get_guint8(tvb, *offset);
     proto_tree_add_uint(tree, hfindex, tvb, *offset, 1, v);
     *offset += 1;
 }
 
-static void minecraft_add_i8(proto_tree *tree, int hfindex, tvbuff_t *tvb, gint *offset) {
+static void minecraft_add_i8(proto_tree *tree, int hfindex, tvbuff_t *tvb, guint *offset) {
     const gint8 v = tvb_get_gint8(tvb, *offset);
     proto_tree_add_int(tree, hfindex, tvb, *offset, 1, v);
     *offset += 1;
 }
 
-static void minecraft_add_u16(proto_tree *tree, int hfindex, tvbuff_t *tvb, gint *offset) {
+static void minecraft_add_u16(proto_tree *tree, int hfindex, tvbuff_t *tvb, guint *offset) {
     const guint16 v = tvb_get_ntohs(tvb, *offset);
     proto_tree_add_uint(tree, hfindex, tvb, *offset, 2, v);
     *offset += 2;
 }
 
-static void minecraft_add_i16(proto_tree *tree, int hfindex, tvbuff_t *tvb, gint *offset) {
+static void minecraft_add_i16(proto_tree *tree, int hfindex, tvbuff_t *tvb, guint *offset) {
     const gint16 v = tvb_get_ntohis(tvb, *offset);
     proto_tree_add_int(tree, hfindex, tvb, *offset, 2, v);
     *offset += 2;
 }
 
-static void minecraft_add_i64(proto_tree *tree, int hfindex, tvbuff_t *tvb, gint *offset) {
+static void minecraft_add_i64(proto_tree *tree, int hfindex, tvbuff_t *tvb, guint *offset) {
     const gint64 v = tvb_get_ntohi48(tvb, *offset);
     proto_tree_add_int64(tree, hfindex, tvb, *offset, 2, v);
     *offset += 2;
@@ -140,7 +140,7 @@ struct minecraft_frame_data {
 
 static void dissect_minecraft_packet(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, guint offset, guint32 len)
 {
-    col_set_str(pinfo->cinfo, COL_PROTOCOL, "minecraft");
+    col_set_str(pinfo->cinfo, COL_PROTOCOL, "Minecraft");
 
     conversation_t *conversation = find_or_create_conversation(pinfo);
 
@@ -210,12 +210,13 @@ static void dissect_minecraft_packet(tvbuff_t *tvb, packet_info *pinfo, proto_tr
             else {
                 login_toClient(packet_id, tvb, pinfo, subtree, offset, data_len);
 
-                if (packet_id == 0x02) {
-                    conversation_data->state = 3;
-                }
-
-                if (packet_id == 0x03) {
-                    read_varint(&conversation_data->compression_threshold, tvb, &offset);
+                switch (packet_id) {
+                    case 0x02:
+                        conversation_data->state = 3;
+                        break;
+                    case 0x03:
+                        read_varint(&conversation_data->compression_threshold, tvb, &offset);
+                        break;
                 }
             }
             break;
@@ -232,22 +233,22 @@ static int dissect_minecraft(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree
 {
     guint offset = 0;
     while (offset < tvb_reported_length(tvb)) {
-        gint available = tvb_reported_length_remaining(tvb, offset);
+        guint available = tvb_reported_length_remaining(tvb, offset);
         guint32 len = 0;
         const guint offset_start = offset;
         if (read_varint(&len, tvb, &offset) == false) {
             pinfo->desegment_offset = offset;
             pinfo->desegment_len = DESEGMENT_ONE_MORE_SEGMENT;
-            return (offset + available);
+            return (int) (offset + available);
         }
 
         if (len > available) {
             pinfo->desegment_offset = offset;
             pinfo->desegment_len = len - available;
-            return (offset + available);
+            return (int) (offset + available);
         }
 
-        col_set_str(pinfo->cinfo, COL_PROTOCOL, "minecraft");
+        col_set_str(pinfo->cinfo, COL_PROTOCOL, "Minecraft");
 
         proto_item *item = proto_tree_add_item(tree, proto_minecraft, tvb, offset, len, ENC_NA);
 
@@ -257,7 +258,7 @@ static int dissect_minecraft(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree
 
         dissect_minecraft_packet(tvb, pinfo, subtree, offset, len);
 
-        offset += (guint)len;
+        offset += len;
     }
 
     return tvb_captured_length(tvb);
