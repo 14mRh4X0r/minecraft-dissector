@@ -26,6 +26,7 @@ static void minecraft_add_i8(proto_tree *tree, int hfindex, tvbuff_t *tvb, guint
 static void minecraft_add_u16(proto_tree *tree, int hfindex, tvbuff_t *tvb, guint *offset);
 static void minecraft_add_i16(proto_tree *tree, int hfindex, tvbuff_t *tvb, guint *offset);
 static void minecraft_add_i64(proto_tree *tree, int hfindex, tvbuff_t *tvb, guint *offset);
+static void minecraft_add_buffer(proto_tree *tree, int hfindex, tvbuff_t *tvb, guint *offset);
 
 
 #include "generated.h"
@@ -124,6 +125,13 @@ static void minecraft_add_i64(proto_tree *tree, int hfindex, tvbuff_t *tvb, guin
     const gint64 v = tvb_get_ntohi48(tvb, *offset);
     proto_tree_add_int64(tree, hfindex, tvb, *offset, 2, v);
     *offset += 2;
+}
+
+void minecraft_add_buffer(proto_tree *tree, int hfindex, tvbuff_t *tvb, guint *offset) {
+    const gint16 len = tvb_get_ntohis(tvb, *offset);
+    proto_tree_add_bytes(tree, hfindex, tvb, *offset, len + 2,
+                         tvb_memdup(wmem_packet_scope(), tvb, *offset + 2, len));
+    *offset += len + 2;
 }
 
 

@@ -124,6 +124,12 @@ const natives = {
       hf_type: "FT_UINT8",
     }
   },
+  buffer() {
+    return {
+      code: "minecraft_add_buffer",
+      hf_type: "FT_BYTES",
+    }
+  },
   restBuffer() {
     return {
       code: "minecraft_add_restbuffer",
@@ -218,8 +224,8 @@ generate(["handshaking", "toClient"])
 generate(["status", "toServer"])
 generate(["status", "toClient"])
 
-generate(["login", "toServer"], true)
-generate(["login", "toClient"], true)
+generate(["login", "toServer"])
+generate(["login", "toClient"])
 
 generate(["play", "toServer"], true)
 generate(["play", "toClient"], true)
@@ -236,7 +242,7 @@ console.log(
       .map(({ name, path, type }) => {
         return `{ &hf_${path},
     { "${uncamel(name)}", "minecraft.${path.replace(/_/g, ".")}", ${type}, ${
-          type === "FT_STRING" ? "BASE_NONE" : "BASE_DEC"
+          ["FT_STRING", "FT_BYTES"].includes(type) ? "BASE_NONE" : "BASE_DEC"
         }, NULL,
       0x0, "${uncamel(name)}", HFILL }},`
       })
