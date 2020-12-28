@@ -29,6 +29,7 @@ if (CMAKE_COMPILER_IS_GNUCC)
 endif()
 
 add_definitions(-DVERSION=\"${PROJECT_VERSION}\")
+add_definitions(-DHAVE_LIBGNUTLS) # TODO find a way to check whether GnuTLS is available
 
 add_custom_command(OUTPUT generated.h COMMAND node generate.js > generated.h WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 
